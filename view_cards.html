@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFID Card Registry - 52 Cards</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-size: 1.2em;
+        }
+        .stats {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        .suits-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .suit-section {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .suit-header {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .suit-header.hearts { color: #ff6b6b; }
+        .suit-header.diamonds { color: #4ecdc4; }
+        .suit-header.clubs { color: #95e1d3; }
+        .suit-header.spades { color: #a8e6cf; }
+        .card-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+        }
+        .card-item {
+            background: white;
+            color: #000;
+            padding: 15px 10px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .card-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        .card-rank {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+        .card-rank.red { color: #d32f2f; }
+        .card-rank.black { color: #000; }
+        .card-uid {
+            font-size: 0.7em;
+            color: #666;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+        .search-box {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.9);
+        }
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            margin-top: 20px;
+        }
+        .info-panel h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🃏 RFID Card Registry</h1>
+        <p class="subtitle">Complete 52-Card Deck Registered</p>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">52</div>
+                <div class="stat-label">Total Cards</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">13</div>
+                <div class="stat-label">♥ Hearts</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">13</div>
+                <div class="stat-label">♦ Diamonds</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">13</div>
+                <div class="stat-label">♣ Clubs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">13</div>
+                <div class="stat-label">♠ Spades</div>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search by UID or card (e.g., 'Ah', '184097028')...">
+        </div>
+
+        <div class="suits-container">
+            <!-- Hearts -->
+            <div class="suit-section">
+                <div class="suit-header hearts">♥ HEARTS</div>
+                <div class="card-list">
+                    <div class="card-item" data-uid="184097028" data-card="Ah">
+                        <div class="card-rank red">A♥</div>
+                        <div class="card-uid">184097028</div>
+                    </div>
+                    <div class="card-item" data-uid="4202573316" data-card="2h">
+                        <div class="card-rank red">2♥</div>
+                        <div class="card-uid">4202573316</div>
+                    </div>
+                    <div class="card-item" data-uid="3807453188" data-card="3h">
+                        <div class="card-rank red">3♥</div>
+                        <div class="card-uid">3807453188</div>
+                    </div>
+                    <div class="card-item" data-uid="3804873988" data-card="4h">
+                        <div class="card-rank red">4♥</div>
+                        <div class="card-uid">3804873988</div>
+                    </div>
+                    <div class="card-item" data-uid="3806104580" data-card="5h">
+                        <div class="card-rank red">5♥</div>
+                        <div class="card-uid">3806104580</div>
+                    </div>
+                    <div class="card-item" data-uid="3804445700" data-card="6h">
+                        <div class="card-rank red">6♥</div>
+                        <div class="card-uid">3804445700</div>
+                    </div>
+                    <div class="card-item" data-uid="3807143940" data-card="7h">
+                        <div class="card-rank red">7♥</div>
+                        <div class="card-uid">3807143940</div>
+                    </div>
+                    <div class="card-item" data-uid="3804760836" data-card="8h">
+                        <div class="card-rank red">8♥</div>
+                        <div class="card-uid">3804760836</div>
+                    </div>
+                    <div class="card-item" data-uid="4202115844" data-card="9h">
+                        <div class="card-rank red">9♥</div>
+                        <div class="card-uid">4202115844</div>
+                    </div>
+                    <div class="card-item" data-uid="3806006532" data-card="Th">
+                        <div class="card-rank red">10♥</div>
+                        <div class="card-uid">3806006532</div>
+                    </div>
+                    <div class="card-item" data-uid="183456772" data-card="Jh">
+                        <div class="card-rank red">J♥</div>
+                        <div class="card-uid">183456772</div>
+                    </div>
+                    <div class="card-item" data-uid="184297476" data-card="Qh">
+                        <div class="card-rank red">Q♥</div>
+                        <div class="card-uid">184297476</div>
+                    </div>
+                    <div class="card-item" data-uid="183348740" data-card="Kh">
+                        <div class="card-rank red">K♥</div>
+                        <div class="card-uid">183348740</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diamonds -->
+            <div class="suit-section">
+                <div class="suit-header diamonds">♦ DIAMONDS</div>
+                <div class="card-list">
+                    <div class="card-item" data-uid="183187204" data-card="Ad">
+                        <div class="card-rank red">A♦</div>
+                        <div class="card-uid">183187204</div>
+                    </div>
+                    <div class="card-item" data-uid="3808179204" data-card="2d">
+                        <div class="card-rank red">2♦</div>
+                        <div class="card-uid">3808179204</div>
+                    </div>
+                    <div class="card-item" data-uid="3805508868" data-card="3d">
+                        <div class="card-rank red">3♦</div>
+                        <div class="card-uid">3805508868</div>
+                    </div>
+                    <div class="card-item" data-uid="3804354052" data-card="4d">
+                        <div class="card-rank red">4♦</div>
+                        <div class="card-uid">3804354052</div>
+                    </div>
+                    <div class="card-item" data-uid="3807558916" data-card="5d">
+                        <div class="card-rank red">5♦</div>
+                        <div class="card-uid">3807558916</div>
+                    </div>
+                    <div class="card-item" data-uid="3804385796" data-card="6d">
+                        <div class="card-rank red">6♦</div>
+                        <div class="card-uid">3804385796</div>
+                    </div>
+                    <div class="card-item" data-uid="3804811780" data-card="7d">
+                        <div class="card-rank red">7♦</div>
+                        <div class="card-uid">3804811780</div>
+                    </div>
+                    <div class="card-item" data-uid="3807449860" data-card="8d">
+                        <div class="card-rank red">8♦</div>
+                        <div class="card-uid">3807449860</div>
+                    </div>
+                    <div class="card-item" data-uid="3808179204" data-card="9d">
+                        <div class="card-rank red">9♦</div>
+                        <div class="card-uid">3808179204</div>
+                    </div>
+                    <div class="card-item" data-uid="3792039172" data-card="Td">
+                        <div class="card-rank red">10♦</div>
+                        <div class="card-uid">3792039172</div>
+                    </div>
+                    <div class="card-item" data-uid="184044036" data-card="Jd">
+                        <div class="card-rank red">J♦</div>
+                        <div class="card-uid">184044036</div>
+                    </div>
+                    <div class="card-item" data-uid="184104964" data-card="Qd">
+                        <div class="card-rank red">Q♦</div>
+                        <div class="card-uid">184104964</div>
+                    </div>
+                    <div class="card-item" data-uid="183516676" data-card="Kd">
+                        <div class="card-rank red">K♦</div>
+                        <div class="card-uid">183516676</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clubs -->
+            <div class="suit-section">
+                <div class="suit-header clubs">♣ CLUBS</div>
+                <div class="card-list">
+                    <div class="card-item" data-uid="183392772" data-card="Ac">
+                        <div class="card-rank black">A♣</div>
+                        <div class="card-uid">183392772</div>
+                    </div>
+                    <div class="card-item" data-uid="3942367748" data-card="2c">
+                        <div class="card-rank black">2♣</div>
+                        <div class="card-uid">3942367748</div>
+                    </div>
+                    <div class="card-item" data-uid="3941500932" data-card="3c">
+                        <div class="card-rank black">3♣</div>
+                        <div class="card-uid">3941500932</div>
+                    </div>
+                    <div class="card-item" data-uid="184306692" data-card="4c">
+                        <div class="card-rank black">4♣</div>
+                        <div class="card-uid">184306692</div>
+                    </div>
+                    <div class="card-item" data-uid="184300804" data-card="5c">
+                        <div class="card-rank black">5♣</div>
+                        <div class="card-uid">184300804</div>
+                    </div>
+                    <div class="card-item" data-uid="3940876804" data-card="6c">
+                        <div class="card-rank black">6♣</div>
+                        <div class="card-uid">3940876804</div>
+                    </div>
+                    <div class="card-item" data-uid="3942366980" data-card="7c">
+                        <div class="card-rank black">7♣</div>
+                        <div class="card-uid">3942366980</div>
+                    </div>
+                    <div class="card-item" data-uid="3941097988" data-card="8c">
+                        <div class="card-rank black">8♣</div>
+                        <div class="card-uid">3941097988</div>
+                    </div>
+                    <div class="card-item" data-uid="3940453636" data-card="9c">
+                        <div class="card-rank black">9♣</div>
+                        <div class="card-uid">3940453636</div>
+                    </div>
+                    <div class="card-item" data-uid="3942369284" data-card="Tc">
+                        <div class="card-rank black">10♣</div>
+                        <div class="card-uid">3942369284</div>
+                    </div>
+                    <div class="card-item" data-uid="184098564" data-card="Jc">
+                        <div class="card-rank black">J♣</div>
+                        <div class="card-uid">184098564</div>
+                    </div>
+                    <div class="card-item" data-uid="183346436" data-card="Qc">
+                        <div class="card-rank black">Q♣</div>
+                        <div class="card-uid">183346436</div>
+                    </div>
+                    <div class="card-item" data-uid="183124228" data-card="Kc">
+                        <div class="card-rank black">K♣</div>
+                        <div class="card-uid">183124228</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spades -->
+            <div class="suit-section">
+                <div class="suit-header spades">♠ SPADES</div>
+                <div class="card-list">
+                    <div class="card-item" data-uid="183479812" data-card="As">
+                        <div class="card-rank black">A♠</div>
+                        <div class="card-uid">183479812</div>
+                    </div>
+                    <div class="card-item" data-uid="3941077764" data-card="2s">
+                        <div class="card-rank black">2♠</div>
+                        <div class="card-uid">3941077764</div>
+                    </div>
+                    <div class="card-item" data-uid="167790340" data-card="3s">
+                        <div class="card-rank black">3♠</div>
+                        <div class="card-uid">167790340</div>
+                    </div>
+                    <div class="card-item" data-uid="3941432324" data-card="4s">
+                        <div class="card-rank black">4♠</div>
+                        <div class="card-uid">3941432324</div>
+                    </div>
+                    <div class="card-item" data-uid="3941501700" data-card="5s">
+                        <div class="card-rank black">5♠</div>
+                        <div class="card-uid">3941501700</div>
+                    </div>
+                    <div class="card-item" data-uid="3941403140" data-card="6s">
+                        <div class="card-rank black">6♠</div>
+                        <div class="card-uid">3941403140</div>
+                    </div>
+                    <div class="card-item" data-uid="3942602500" data-card="7s">
+                        <div class="card-rank black">7♠</div>
+                        <div class="card-uid">3942602500</div>
+                    </div>
+                    <div class="card-item" data-uid="184264964" data-card="8s">
+                        <div class="card-rank black">8♠</div>
+                        <div class="card-uid">184264964</div>
+                    </div>
+                    <div class="card-item" data-uid="3942583812" data-card="9s">
+                        <div class="card-rank black">9♠</div>
+                        <div class="card-uid">3942583812</div>
+                    </div>
+                    <div class="card-item" data-uid="3942575876" data-card="Ts">
+                        <div class="card-rank black">10♠</div>
+                        <div class="card-uid">3942575876</div>
+                    </div>
+                    <div class="card-item" data-uid="183601668" data-card="Js">
+                        <div class="card-rank black">J♠</div>
+                        <div class="card-uid">183601668</div>
+                    </div>
+                    <div class="card-item" data-uid="182965252" data-card="Qs">
+                        <div class="card-rank black">Q♠</div>
+                        <div class="card-uid">182965252</div>
+                    </div>
+                    <div class="card-item" data-uid="182406148" data-card="Ks">
+                        <div class="card-rank black">K♠</div>
+                        <div class="card-uid">182406148</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>✓ Registry Complete!</h3>
+            <p>All 52 cards have been successfully registered with their RFID UIDs.</p>
+            <p style="margin-top: 10px;"><strong>Files created:</strong></p>
+            <ul style="margin-left: 20px; margin-top: 5px;">
+                <li><code>cards.json</code> - Main registry file</li>
+                <li><code>cards_import.csv</code> - Original CSV data</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>Next steps:</strong></p>
+            <ul style="margin-left: 20px; margin-top: 5px;">
+                <li>Use with PokerKit UI: <code>streamlit run pokerkit/poker_ui.py</code></li>
+                <li>Manage cards: <code>python register_cards.py</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.card-item');
+            
+            cards.forEach(card => {
+                const uid = card.dataset.uid.toLowerCase();
+                const cardCode = card.dataset.card.toLowerCase();
+                
+                if (uid.includes(searchTerm) || cardCode.includes(searchTerm)) {
+                    card.style.display = 'block';
+                    card.style.animation = 'highlight 0.5s';
+                } else {
+                    card.style.display = searchTerm ? 'none' : 'block';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
