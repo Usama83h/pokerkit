@@ -2489,7 +2489,7 @@ class PokerStarsParser(REParser):
             r' (?P<player>.+)'
             r' \(\D?(?P<starting_stack>[0-9.]+)'
             r' in'
-            r' chips\)'
+            r' chips'
         ),
     )
     HOLE_DEALING = compile(
