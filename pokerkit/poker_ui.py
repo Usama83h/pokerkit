@@ -5,18 +5,8 @@ from pokerkit.poker_rfid_integration import RFIDCardRegistry
 from pokerkit.games import NoLimitTexasHoldem, Automation
 import random
 
-try:
-    import pyttsx3
-    tts_engine = pyttsx3.init()
-    def tts_broadcast_action(action, player=None, amount=None):
-        text = f"{player} {action.replace('_',' ')}" if player else action
-        if amount is not None:
-            text += f" {amount}"
-        tts_engine.say(text)
-        tts_engine.runAndWait()
-except ImportError:
-    def tts_broadcast_action(action, player=None, amount=None):
-        pass
+def tts_broadcast_action(action, player=None, amount=None):
+    pass  # TTS disabled in web mode
 
 try:
     from mfrc522 import SimpleMFRC522
@@ -89,19 +79,16 @@ if HAVE_RFID and not st.session_state['rfid_thread_started']:
 
 def process_deal(poker_code):
     s = st.session_state['state']
-    try:
-        if s.can_deal_hole():
-            s.deal_hole(poker_code)
-            st.session_state['log'].append(f"Dealt {poker_code} to a player")
-            tts_broadcast_action('deal', 'player', poker_code)
-        elif s.can_deal_board():
-            s.deal_board(poker_code)
-            st.session_state['log'].append(f"Dealt {poker_code} to board")
-            tts_broadcast_action('deal', 'board', poker_code)
-        else:
-            st.session_state['log'].append("Cannot deal a card right now.")
-    except Exception as e:
-        st.session_state['log'].append(f"Deal error: {e}")
+    if s.can_deal_hole():
+        s.deal_hole(poker_code)
+        st.session_state['log'].append(f"Dealt {poker_code} to a player")
+        tts_broadcast_action('deal', 'player', poker_code)
+    elif s.can_deal_board():
+        s.deal_board(poker_code)
+        st.session_state['log'].append(f"Dealt {poker_code} to board")
+        tts_broadcast_action('deal', 'board', poker_code)
+    else:
+        st.session_state['log'].append("Cannot deal a card right now.")
 
 def handle_player_action(action, amount=None):
     s = st.session_state['state']
@@ -170,16 +157,24 @@ if HAVE_RFID:
 else:
     st.info("RFID hardware not found. Using demo mode.")
     if st.button('Simulate card scan (give random card)'):
-        available = [
-            c for c in s.deck_cards
-            if c not in s.board_cards
-            and all(c not in h for h in s.hole_cards if h)
-        ]
+        available = list(s.deck_cards)
         if available:
             demo_card = random.choice(available)
-            process_deal(repr(demo_card))
+            card_str = repr(demo_card)
+            try:
+                if s.can_deal_hole():
+                    s.deal_hole(card_str)
+                    st.session_state['log'].append(f"Dealt {card_str} to a player")
+                elif s.can_deal_board():
+                    s.deal_board(card_str)
+                    st.session_state['log'].append(f"Dealt {card_str} to board")
+                else:
+                    st.error("Cannot deal right now — game may be waiting for player action.")
+            except Exception as e:
+                st.error(f"Error dealing card: {e}")
+            st.rerun()
         else:
-            st.session_state['log'].append("No cards available to deal.")
+            st.error("No cards left in deck.")
 
 # Player actions
 st.write("---")
@@ -209,6 +204,7 @@ if s.status:
                         handle_player_action(action, amount=raise_amount)
                     else:
                         handle_player_action(action)
+                    st.rerun()
     else:
         st.info("No actions available — deal cards first.")
 
