@@ -32,6 +32,9 @@ No-limit royal hold'em                                       :class:`pokerkit.ga
 No-limit short-deck hold'em                                  :class:`pokerkit.games.NoLimitShortDeckHoldem`
 No-limit Texas hold'em                                       :class:`pokerkit.games.NoLimitTexasHoldem`
 Pot-limit Omaha hold'em                                      :class:`pokerkit.games.PotLimitOmahaHoldem`
+Kuhn poker                                                   :class:`pokerkit.games.KuhnPoker`
+Rhode Island hold'em                                         :class:`pokerkit.games.RhodeIslandHoldem`
+Royal Rhode Island hold'em                                   :class:`pokerkit.games.RoyalRhodeIslandHoldem`
 ============================================================ ========================================================================
 
 These pre-defined games can be created as shown below:
@@ -254,7 +257,7 @@ The below definition shows a definition of a Kuhn poker state:
                False,  # standing pat or discarding
                Opening.POSITION,  # who opens the betting?
                1,  # min bet
-               None,  # maximum number of completions/bettings/raisings
+               1,  # maximum number of completions/bettings/raisings
            ),
        ),
        BettingStructure.FIXED_LIMIT,  # betting structure
@@ -297,15 +300,16 @@ For example, if you are trying to create a poker AI, you are not worried about h
 
    # Automate everything except player actions.
    # Manual:
-   #   - Standing pat
-   #   - Discarding
-   #   - Folding
-   #   - Checking
-   #   - Calling
-   #   - Posting bring-in
-   #   - Completing
-   #   - Betting
-   #   - Raising
+   # - Standing pat
+   # - Discarding
+   # - Folding
+   # - Checking
+   # - Calling
+   # - Posting bring-in
+   # - Completing
+   # - Betting
+   # - Raising
+   # - Selecting the number of runouts (cash-game only)
    automations = (
        Automation.ANTE_POSTING,
        Automation.BET_COLLECTION,
@@ -321,19 +325,20 @@ For example, if you are trying to create a poker AI, you are not worried about h
 
    # Automate everything except player actions and dealings.
    # Manual:
-   #   - Player:
-   #     - Standing pat
-   #     - Discarding
-   #     - Folding
-   #     - Checking
-   #     - Calling
-   #     - Posting bring-in
-   #     - Completing
-   #     - Betting
-   #     - Raising
-   #   - Dealer:
-   #     - Deal hole cards
-   #     - Deal board cards
+   # - Player:
+   #   - Standing pat
+   #   - Discarding
+   #   - Folding
+   #   - Checking
+   #   - Calling
+   #   - Posting bring-in
+   #   - Completing
+   #   - Betting
+   #   - Raising
+   #   - Selecting the number of runouts (cash-game only)
+   # - Dealer:
+   #   - Deal hole cards
+   #   - Deal board cards
    automations = (
        Automation.ANTE_POSTING,
        Automation.BET_COLLECTION,
@@ -345,7 +350,17 @@ For example, if you are trying to create a poker AI, you are not worried about h
        Automation.CHIPS_PULLING,
    )
 
-However, if you are trying to create an online poker room, you need to represent all these fine changes to create a smooth user experience. In such a case, nothing must be automated, as below.
+In cash-games only, if you are not interested in letting players select the number of runouts after going all-in, you can add the following entry to force it to a single runout.
+
+.. code-block:: python
+
+   automations = (
+        ...,
+        Automation.RUNOUT_COUNT_SELECTION,  # Cash-game only
+        ...,
+   )
+
+If you are trying to create an online poker room, you need to represent all these fine changes to create a smooth user experience. In such a case, nothing must be automated, as below.
 
 .. code-block:: python
 
@@ -365,6 +380,7 @@ However, if you are trying to create an online poker room, you need to represent
    #   - Completing
    #   - Betting
    #   - Raising
+   #   - Selecting the number of runouts (cash-game only)
    #   - Showdown (show/muck)
    #   - Incorporating won chips into the stack
    # - Dealer:
@@ -655,6 +671,7 @@ Helper Method/Attribute                              Description
 :attr:`pokerkit.state.State.street_return_index`     At what street to return to when multiple runouts are enabled.
 :attr:`pokerkit.state.State.street_return_count`     Number of times to return to a specific street to perform multiple runouts.
 :attr:`pokerkit.state.State.all_in_status`           All active players are all-in.
+:attr:`pokerkit.state.State.folded_status`           Everyone except one folded.
 :attr:`pokerkit.state.State.status`                  Whether or not the hand is active (ongoing).
 :attr:`pokerkit.state.State.operations`              History of operations carried out so far.
 :attr:`pokerkit.state.State.hand_type_count`         Number of hand types.
@@ -664,7 +681,7 @@ Helper Method/Attribute                              Description
 :attr:`pokerkit.state.State.street_count`            Number of streets.
 :attr:`pokerkit.state.State.street_indices`          Indices of streets.
 :attr:`pokerkit.state.State.street`                  Current street.
-:attr:`pokerkit.state.State.turn_index`              The index of the player who is in turn to act (draw, betting street, showdown). This attribute exists to combine the three following attributes: :attr:`pokerkit.state.State.stander_pat_or_discarder_index`, :attr:`pokerkit.state.State.actor_index`, and :attr:`pokerkit.state.State.showdown_index`.
+:attr:`pokerkit.state.State.turn_index`              The index of the player who is in turn to act (draw, betting street, showdown). This attribute exists to combine the three following attributes: :attr:`pokerkit.state.State.stand_patter_or_discarder_index`, :attr:`pokerkit.state.State.actor_index`, and :attr:`pokerkit.state.State.showdown_index`.
 :attr:`pokerkit.state.State.board_count`             Number of boards (maybe more than ``1`` for multi-runout or multi-board games).
 :attr:`pokerkit.state.State.board_indices`           Indices of boards.
 :meth:`pokerkit.state.State.get_board`               The n'th board.
@@ -920,7 +937,7 @@ Helper Method/Attribute                                          Description
 :attr:`pokerkit.state.State.board_dealing_counts`                Numbers of cards that are pending to be dealt to the board.
 :attr:`pokerkit.state.State.standing_pat_or_discarding_statuses` Boolean values on whether the player should stand pat/discard.
 :attr:`pokerkit.state.State.hole_dealee_index`                   Next player being dealt the hole cards by the dealer.
-:attr:`pokerkit.state.State.stander_pat_or_discarder_index`      Next player standing pat or discarding.
+:attr:`pokerkit.state.State.stand_patter_or_discarder_index`     Next player standing pat or discarding.
 ================================================================ =============================================================================================
 
 Card Burning Operation
@@ -1040,6 +1057,12 @@ Chips Pushing Phase/Operation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This operation (:meth:`pokerkit.state.State.push_chips`) corresponds to pushing the chips to the winner(s). Each call pushes one split pot (main/side). If there are multiple hand types (or boards) and/or multiple players with differing starting stack sizes that are all-in and are entitled to the piece of the pot, multiple split pots (main + side) will exist and therefore, this method must be invoked multiple times until all pots are pushed to the players.
+
+================================================ ====================================================
+Helper Method/Attribute                          Description
+================================================ ====================================================
+:attr:`pokerkit.state.State.total_pushed_amount` The total amount pushed from the pot to each player.
+================================================ ====================================================
 
 Chips Pulling Phase/Operation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

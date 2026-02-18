@@ -4,6 +4,68 @@ Changelog
 
 All notable changes to this project will be documented in this file.
 
+Version 0.7.3 (January 15, 2026)
+--------------------------------
+
+**Changed**
+
+- Update PokerStars parser format to accept bounty logs.
+
+Version 0.7.2 (January 9, 2026)
+-------------------------------
+
+**Changed**
+
+- Update PokerStars parser format to accept tournament logs.
+
+Version 0.7.1 (January 2, 2026)
+-------------------------------
+
+**Changed**
+
+- Update PokerStars parser format to accept the latest logs.
+
+Version 0.7.0 (December 7, 2025)
+--------------------------------
+
+This version release introduces **backward incompatible changes**. Please read the below content carefully!
+
+**Changed**
+
+- Rename ``pokerkit.state.State.stander_pat_or_discarder_index`` to ``pokerkit.state.State.stand_patter_or_discarder_index``.
+
+**Added**
+
+- New pre-defined variants:
+
+  - Added ``pokerkit.games.KuhnPoker``.
+  - Added ``pokerkit.games.RhodeIslandHoldem``.
+  - Added ``pokerkit.games.RoyalHoldemMixin``.
+  - Added ``pokerkit.games.RoyalRhodeIslandHoldem``.
+
+- New hand types:
+
+  - Added ``pokerkit.hands.RhodeIslandHoldemHand``.
+  - Added ``pokerkit.lookups.RhodeIslandHoldemLookup``.
+
+- New helper attributes:
+
+  - Added ``pokerkit.state.State.folded_status``.
+  - Added ``pokerkit.state.State.total_pushed_amount``.
+
+Version 0.6.5 (November 16, 2025)
+---------------------------------
+
+**Bugfixes**
+
+- ``ZeroDivisionError`` when non-standard folds are performed in all-in pots (cash-game mode only).
+- Incorrect opener index in heads-up when blinds are ``[0, 2]``.
+
+**Changed**
+
+- Add trailing period ``'.'`` to some warning messages.
+- Enforce correct card burning/dealing sequence in bomb pots and Courchevel: hole dealing -> card burning -> board dealing.
+
 Version 0.6.4 (October 27, 2025)
 --------------------------------
 

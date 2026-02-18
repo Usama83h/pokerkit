@@ -732,7 +732,7 @@ class State:
     ...             False,
     ...             Opening.POSITION,
     ...             1,
-    ...             None,
+    ...             1,
     ...         ),
     ...     ),
     ...     BettingStructure.FIXED_LIMIT,
@@ -1151,6 +1151,12 @@ class State:
 
     Simply put, are all active players all-in? ``True`` if yes,
     ``False`` otherwise.
+    """
+    folded_status: bool = field(default=False, init=False)
+    """The folded status.
+
+    Simply put, did everyone except one fold? ``True`` if yes, ``False``
+    otherwise.
     """
     status: bool = field(default=True, init=False)
     """The game status.
@@ -1602,7 +1608,7 @@ class State:
         Regardless of what stage the state is in, whoever must make a
         decision will be returned, which is one of the following:
 
-        - :attr:`pokerkit.state.State.stander_pat_or_discarder_index`
+        - :attr:`pokerkit.state.State.stand_patter_or_discarder_index`
         - :attr:`pokerkit.state.State.actor_index`
         - :attr:`pokerkit.state.State.showdown_index`
 
@@ -1611,8 +1617,8 @@ class State:
         :return: The index of the player who is in turn, or ``None`` if
                  no one is in turn.
         """
-        if self.stander_pat_or_discarder_index is not None:
-            player_index = self.stander_pat_or_discarder_index
+        if self.stand_patter_or_discarder_index is not None:
+            player_index = self.stand_patter_or_discarder_index
         elif self.actor_index is not None:
             player_index = self.actor_index
         elif self.showdown_index is not None:
@@ -2390,7 +2396,7 @@ class State:
             warn(
                 (
                     'The number of cards dealt is unspecified. PokerKit will'
-                    ' assume the worst case scenario'
+                    ' assume the worst case scenario.'
                 ),
             )
 
@@ -2439,7 +2445,7 @@ class State:
                             f'A card being dealt {repr(card)} is not'
                             ' recommended to be dealt. For more details,'
                             ' please consult the method'
-                            ' \'pokerkit.state.State.get_dealable_cards()\''
+                            ' \'pokerkit.state.State.get_dealable_cards()\'.'
                         ),
                     )
 
@@ -2921,9 +2927,11 @@ class State:
 
         if not any(self.ante_posting_statuses):
             self._end_ante_posting()
-        elif Automation.ANTE_POSTING in self.automations:
-            while any(self.ante_posting_statuses):
-                self.post_ante()
+        elif (
+                Automation.ANTE_POSTING in self.automations
+                and self.can_post_ante()
+        ):
+            self.post_ante()
 
     def _end_ante_posting(self) -> None:
         assert not any(self.ante_posting_statuses)
@@ -3142,9 +3150,11 @@ class State:
 
         if not self.bet_collection_status:
             self._end_bet_collection()
-        elif Automation.BET_COLLECTION in self.automations:
-            if self.bet_collection_status:
-                self.collect_bets()
+        elif (
+                Automation.BET_COLLECTION in self.automations
+                and self.can_collect_bets()
+        ):
+            self.collect_bets()
 
     def _end_bet_collection(self) -> None:
         assert not self.bet_collection_status
@@ -3156,6 +3166,8 @@ class State:
             self.street_return_count -= 1
 
         if sum(self.statuses) == 1:
+            self.folded_status = True
+
             self._begin_chips_pushing()
         elif self.street is None:
             self._begin_blind_or_straddle_posting()
@@ -3296,9 +3308,11 @@ class State:
 
         if not any(self.blind_or_straddle_posting_statuses):
             self._end_blind_or_straddle_posting()
-        elif Automation.BLIND_OR_STRADDLE_POSTING in self.automations:
-            while any(self.blind_or_straddle_posting_statuses):
-                self.post_blind_or_straddle()
+        elif (
+                Automation.BLIND_OR_STRADDLE_POSTING in self.automations
+                and self.can_post_blind_or_straddle()
+        ):
+            self.post_blind_or_straddle()
 
     def _end_blind_or_straddle_posting(self) -> None:
         assert not any(self.blind_or_straddle_posting_statuses)
@@ -3585,23 +3599,21 @@ class State:
                 and not any(self.standing_pat_or_discarding_statuses)
         ):
             self._end_dealing()
-        elif not any(self.standing_pat_or_discarding_statuses):
-            if (
-                    Automation.CARD_BURNING in self.automations
-                    and self.card_burning_status
-            ):
-                self.burn_card()
-
-            if not self.card_burning_status:
-                if Automation.HOLE_DEALING in self.automations:
-                    while any(self.hole_dealing_statuses):
-                        self.deal_hole()
-
-                if (
-                        Automation.BOARD_DEALING in self.automations
-                        and any(self.board_dealing_counts)
-                ):
-                    self.deal_board()
+        elif (
+                Automation.CARD_BURNING in self.automations
+                and self.can_burn_card()
+        ):
+            self.burn_card()
+        elif (
+                Automation.HOLE_DEALING in self.automations
+                and self.can_deal_hole()
+        ):
+            self.deal_hole()
+        elif (
+                Automation.BOARD_DEALING in self.automations
+                and self.can_deal_board()
+        ):
+            self.deal_board()
 
     def _end_dealing(self) -> None:
         assert not self.card_burning_status
@@ -3630,6 +3642,11 @@ class State:
 
         if not self.card_burning_status:
             raise ValueError('No card burning is pending.')
+        elif (
+                any(self.hole_dealing_statuses)
+                and any(self.board_dealing_counts)
+        ):
+            raise ValueError('Hole cards should be dealt first.')
         elif any(self.standing_pat_or_discarding_statuses):
             raise ValueError(
                 (
@@ -3740,7 +3757,7 @@ class State:
             )
 
     def _verify_hole_dealing(self) -> None:
-        if self.card_burning_status:
+        if self.card_burning_status and not any(self.board_dealing_counts):
             raise ValueError('A card must be burnt before hole dealing.')
         elif not any(self.hole_dealing_statuses):
             raise ValueError('Currently, nobody can be dealt hole cards.')
@@ -3999,10 +4016,10 @@ class State:
         return operation
 
     @property
-    def stander_pat_or_discarder_index(self) -> int | None:
-        """Return the stander pat or discarder index.
+    def stand_patter_or_discarder_index(self) -> int | None:
+        """Return the stand-patter or discarder index.
 
-        :return: The stander pat or discarder index if applicable,
+        :return: The stand-patter or discarder index if applicable,
                  otherwise ``None``.
         """
         try:
@@ -4032,7 +4049,7 @@ class State:
         self._verify_standing_pat_or_discarding()
 
         cards = Card.clean(cards)
-        player_index = self.stander_pat_or_discarder_index
+        player_index = self.stand_patter_or_discarder_index
 
         assert player_index is not None
 
@@ -4076,7 +4093,7 @@ class State:
         hole cards.
 
         The player currently standing pat/discarding can be accessed via
-        :attr:`pokerkit.state.State.stander_pat_or_discarder_index`.
+        :attr:`pokerkit.state.State.stand_patter_or_discarder_index`.
 
         After the standing pat or discarding is done for all pending
         players, their hole should be replenished by the subsequent hole
@@ -4088,7 +4105,7 @@ class State:
         :raises ValueError: If the discard cannot be done.
         """
         cards = self.verify_standing_pat_or_discarding(cards)
-        player_index = self.stander_pat_or_discarder_index
+        player_index = self.stand_patter_or_discarder_index
 
         assert player_index is not None
         assert self.street_index is not None
@@ -4178,10 +4195,15 @@ class State:
 
         match self.street.opening:
             case Opening.POSITION:
+                blinds_or_straddles = self.blinds_or_straddles
+
+                if self.player_count == 2:
+                    blinds_or_straddles = blinds_or_straddles[::-1]
+
                 max_bet_index = max(
                     self.player_indices,
                     key=lambda i: (
-                        (self.bets[i] * sign(self.blinds_or_straddles[i]), i)
+                        (self.bets[i] * sign(blinds_or_straddles[i]), i)
                     ),
                 )
                 self.opener_index = (max_bet_index + 1) % self.player_count
@@ -5125,14 +5147,16 @@ class State:
                 and not self.showdown_indices
         ):
             self._end_showdown()
-        else:
-            if Automation.RUNOUT_COUNT_SELECTION in self.automations:
-                while any(self.runout_count_selector_statuses):
-                    self.select_runout_count()
-
-            if Automation.HOLE_CARDS_SHOWING_OR_MUCKING in self.automations:
-                while self.showdown_indices:
-                    self.show_or_muck_hole_cards()
+        elif (
+                Automation.RUNOUT_COUNT_SELECTION in self.automations
+                and self.can_select_runout_count()
+        ):
+            self.select_runout_count()
+        elif (
+                Automation.HOLE_CARDS_SHOWING_OR_MUCKING in self.automations
+                and self.can_show_or_muck_hole_cards()
+        ):
+            self.show_or_muck_hole_cards()
 
     def _end_showdown(self) -> None:
         assert not any(self.runout_count_selector_statuses)
@@ -5750,9 +5774,11 @@ class State:
 
         if not any(self.hand_killing_statuses):
             self._end_hand_killing()
-        elif Automation.HAND_KILLING in self.automations:
-            while any(self.hand_killing_statuses):
-                self.kill_hand()
+        elif (
+                Automation.HAND_KILLING in self.automations
+                and self.can_kill_hand()
+        ):
+            self.kill_hand()
 
     def _end_hand_killing(self) -> None:
         for i in self.player_indices:
@@ -5978,6 +6004,8 @@ class State:
         default_factory=list,
         init=False,
     )
+    total_pushed_amount: int = field(default=0, init=False)
+    """The total pushed amount."""
 
     def _setup_chips_pushing(self) -> None:
         pass
@@ -6037,9 +6065,11 @@ class State:
 
         if not self._sub_pots:
             self._end_chips_pushing()
-        elif Automation.CHIPS_PUSHING in self.automations:
-            while self._sub_pots:
-                self.push_chips()
+        elif (
+                Automation.CHIPS_PUSHING in self.automations
+                and self.can_push_chips()
+        ):
+            self.push_chips()
 
     def _end_chips_pushing(self) -> None:
         assert self._pots is not None
@@ -6142,20 +6172,26 @@ class State:
             player_indices = [
                 i for i in pot.player_indices if hands[i] == max_hand
             ]
-            quotient, remainder = self.divmod(amount, len(player_indices))
 
-            for i in player_indices:
-                assert self.statuses[i]
+            if player_indices:
+                quotient, remainder = self.divmod(amount, len(player_indices))
 
-                sub_sub_sub_amount = quotient
+                for i in player_indices:
+                    assert self.statuses[i]
 
-                if i == player_indices[0]:
-                    sub_sub_sub_amount += remainder
+                    sub_sub_sub_amount = quotient
 
-                self.bets[i] += sub_sub_sub_amount
+                    if i == player_indices[0]:
+                        sub_sub_sub_amount += remainder
 
+                    self.bets[i] += sub_sub_sub_amount
+            else:
+                warn('Due to non-standard folds, some chips will be burned.')
+
+        amounts = tuple(starmap(sub, zip(self.bets, bets)))
+        self.total_pushed_amount += sum(amounts)
         operation = ChipsPushing(
-            tuple(starmap(sub, zip(self.bets, bets))),
+            amounts,
             pot_index,
             board_index,
             hand_type_index,
@@ -6196,9 +6232,11 @@ class State:
 
         if not any(self.chips_pulling_statuses):
             self._end_chips_pulling()
-        elif Automation.CHIPS_PULLING in self.automations:
-            while any(self.chips_pulling_statuses):
-                self.pull_chips()
+        elif (
+                Automation.CHIPS_PULLING in self.automations
+                and self.can_pull_chips()
+        ):
+            self.pull_chips()
 
     def _end_chips_pulling(self) -> None:
         for i in self.player_indices:
