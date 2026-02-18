@@ -1300,10 +1300,10 @@ def parse_action(
                 commentary=commentary,
             )
         case player, 'sd':
-            verify_player(state.stander_pat_or_discarder_index)
+            verify_player(state.stand_patter_or_discarder_index)
             state.stand_pat_or_discard(commentary=commentary)
         case player, 'sd', cards:
-            verify_player(state.stander_pat_or_discarder_index)
+            verify_player(state.stand_patter_or_discarder_index)
             state.stand_pat_or_discard(cards, commentary=commentary)
         case player, 'pb':
             verify_player(state.actor_index)
@@ -1431,6 +1431,8 @@ class REParser(Parser, ABC):
             try:
                 hh = self._parse(s, parse_value)
             except (KeyError, ValueError):
+                from traceback import print_exc
+                print_exc()
                 message = f'Unable to parse {repr(s)}.'
 
                 if error_status:
@@ -2462,9 +2464,12 @@ class PartyPokerParser(REParser):
 class PokerStarsParser(REParser):
     """A class for PokerStars hand history parser."""
 
-    HAND = compile(r'^PokerStars .+?(?=^\n{2,})', DOTALL | MULTILINE)
+    HAND = compile(
+        r'^PokerStars .+?(?=^\n{2,}|^Hand #|\Z)',
+        DOTALL | MULTILINE,
+    )
     FINAL_SEAT = compile(r'#(?P<final_seat>\d+) is the button')
-    VARIANT = compile(r":  (?P<variant>Hold'em No Limit) \(")
+    VARIANT = compile(r" (?P<variant>Hold'em No Limit) ")
     VARIANTS = {'Hold\'em No Limit': 'NT'}
     SEATS = compile(r'Seat (?P<seat>\d+): (?P<player>.+) \(')
     ANTE_POSTING = UNMATCHABLE_PATTERN
@@ -2484,7 +2489,7 @@ class PokerStarsParser(REParser):
             r' (?P<player>.+)'
             r' \(\D?(?P<starting_stack>[0-9.]+)'
             r' in'
-            r' chips\)'
+            r' chips'
         ),
     )
     HOLE_DEALING = compile(

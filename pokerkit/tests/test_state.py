@@ -16,13 +16,18 @@ from pokerkit.games import (
     NoLimitDeuceToSevenLowballSingleDraw,
     NoLimitShortDeckHoldem,
     NoLimitTexasHoldem,
+    RhodeIslandHoldem,
 )
-from pokerkit.hands import KuhnPokerHand
+from pokerkit.hands import KuhnPokerHand, StandardHighHand
+from pokerkit.notation import HandHistory
 from pokerkit.state import (
     Automation,
     BettingStructure,
+    BoardDealing,
+    CardBurning,
     CheckingOrCalling,
     _HighHandOpeningLookup,
+    HoleDealing,
     _LowHandOpeningLookup,
     Opening,
     Pot,
@@ -808,6 +813,239 @@ class StateTestCase(TestCase):
 
         resetwarnings()
 
+        state = State(
+            tuple(Automation),
+            Deck.STANDARD,
+            (StandardHighHand,),
+            (
+                Street(
+                    True,
+                    (False, False),
+                    3,
+                    False,
+                    Opening.POSITION,
+                    2,
+                    None,
+                ),
+            ),
+            BettingStructure.NO_LIMIT,
+            True,
+            10,
+            0,
+            0,
+            200,
+            6,
+        )
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertEqual(state.actor_index, 0)
+        self.assertIsInstance(state.operations[-3], HoleDealing)
+        self.assertIsInstance(state.operations[-2], CardBurning)
+        self.assertIsInstance(state.operations[-1], BoardDealing)
+
+        state = State(
+            tuple(Automation),
+            Deck.STANDARD,
+            (StandardHighHand,),
+            (
+                Street(
+                    True,
+                    (False, False),
+                    0,
+                    False,
+                    Opening.POSITION,
+                    2,
+                    None,
+                ),
+            ),
+            BettingStructure.NO_LIMIT,
+            True,
+            10,
+            0,
+            0,
+            200,
+            6,
+        )
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertEqual(state.actor_index, 0)
+        self.assertIsInstance(state.operations[-13], CardBurning)
+
+        for i in range(-12, 0):
+            self.assertIsInstance(state.operations[i], HoleDealing)
+
+        state = NoLimitTexasHoldem.create_state(
+            tuple(Automation),
+            True,
+            0,
+            (0, 2),
+            2,
+            200,
+            6,
+        )
+
+        state.fold()
+        state.fold()
+        state.fold()
+        state.fold()
+        state.check_or_call()
+        state.check_or_call()
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertEqual(state.actor_index, 0)
+        self.assertIsInstance(state.operations[-2], CardBurning)
+        self.assertIsInstance(state.operations[-1], BoardDealing)
+
+    def test_dealing_action_queries(self) -> None:
+        automations = (
+            Automation.ANTE_POSTING,
+            Automation.BET_COLLECTION,
+            Automation.BLIND_OR_STRADDLE_POSTING,
+            Automation.HOLE_CARDS_SHOWING_OR_MUCKING,
+            Automation.HAND_KILLING,
+            Automation.CHIPS_PUSHING,
+            Automation.CHIPS_PULLING,
+        )
+        state = State(
+            automations,
+            Deck.STANDARD,
+            (StandardHighHand,),
+            (
+                Street(
+                    True,
+                    (False, False),
+                    3,
+                    False,
+                    Opening.POSITION,
+                    2,
+                    None,
+                ),
+            ),
+            BettingStructure.NO_LIMIT,
+            True,
+            10,
+            0,
+            0,
+            200,
+            6,
+        )
+
+        self.assertFalse(state.can_burn_card())
+        self.assertTrue(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertIsNone(state.actor_index)
+
+        while state.can_deal_hole():
+            state.deal_hole()
+
+        self.assertTrue(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertIsNone(state.actor_index)
+
+        state.burn_card()
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertTrue(state.can_deal_board())
+        self.assertIsNone(state.actor_index)
+
+        state.deal_board()
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertEqual(state.actor_index, 0)
+
+        state = State(
+            automations,
+            Deck.STANDARD,
+            (StandardHighHand,),
+            (
+                Street(
+                    True,
+                    (False, False),
+                    0,
+                    False,
+                    Opening.POSITION,
+                    2,
+                    None,
+                ),
+            ),
+            BettingStructure.NO_LIMIT,
+            True,
+            10,
+            0,
+            0,
+            200,
+            6,
+        )
+
+        self.assertTrue(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertIsNone(state.actor_index)
+
+        state.burn_card()
+
+        self.assertFalse(state.can_burn_card())
+        self.assertTrue(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertIsNone(state.actor_index)
+
+        while state.can_deal_hole():
+            state.deal_hole()
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertEqual(state.actor_index, 0)
+
+        state = NoLimitTexasHoldem.create_state(
+            automations,
+            True,
+            0,
+            (0, 2),
+            2,
+            200,
+            6,
+        )
+
+        while state.can_deal_hole():
+            state.deal_hole()
+
+        state.fold()
+        state.fold()
+        state.fold()
+        state.fold()
+        state.check_or_call()
+        state.check_or_call()
+
+        self.assertTrue(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertIsNone(state.actor_index)
+
+        state.burn_card()
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertTrue(state.can_deal_board())
+        self.assertIsNone(state.actor_index)
+
+        state.deal_board()
+
+        self.assertFalse(state.can_burn_card())
+        self.assertFalse(state.can_deal_hole())
+        self.assertFalse(state.can_deal_board())
+        self.assertEqual(state.actor_index, 0)
+
     def test_turn_index(self) -> None:
         state = NoLimitDeuceToSevenLowballSingleDraw.create_state(
             (
@@ -830,65 +1068,65 @@ class StateTestCase(TestCase):
         )
 
         self.assertEqual(state.turn_index, 2)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 2)
         self.assertEqual(state.showdown_index, None)
         state.fold()
         self.assertEqual(state.turn_index, 3)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 3)
         self.assertEqual(state.showdown_index, None)
         state.fold()
         self.assertEqual(state.turn_index, 4)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 4)
         self.assertEqual(state.showdown_index, None)
         state.fold()
         self.assertEqual(state.turn_index, 5)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 5)
         self.assertEqual(state.showdown_index, None)
         state.fold()
         self.assertEqual(state.turn_index, 0)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 0)
         self.assertEqual(state.showdown_index, None)
         state.check_or_call()
         self.assertEqual(state.turn_index, 1)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 1)
         self.assertEqual(state.showdown_index, None)
         state.check_or_call()
 
         self.assertEqual(state.turn_index, 0)
-        self.assertEqual(state.stander_pat_or_discarder_index, 0)
+        self.assertEqual(state.stand_patter_or_discarder_index, 0)
         self.assertEqual(state.actor_index, None)
         self.assertEqual(state.showdown_index, None)
         state.stand_pat_or_discard()
         self.assertEqual(state.turn_index, 1)
-        self.assertEqual(state.stander_pat_or_discarder_index, 1)
+        self.assertEqual(state.stand_patter_or_discarder_index, 1)
         self.assertEqual(state.actor_index, None)
         self.assertEqual(state.showdown_index, None)
         state.stand_pat_or_discard()
 
         self.assertEqual(state.turn_index, 0)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 0)
         self.assertEqual(state.showdown_index, None)
         state.check_or_call()
         self.assertEqual(state.turn_index, 1)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, 1)
         self.assertEqual(state.showdown_index, None)
         state.check_or_call()
 
         self.assertEqual(state.turn_index, 0)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, None)
         self.assertEqual(state.showdown_index, 0)
         state.show_or_muck_hole_cards()
         self.assertEqual(state.turn_index, 1)
-        self.assertEqual(state.stander_pat_or_discarder_index, None)
+        self.assertEqual(state.stand_patter_or_discarder_index, None)
         self.assertEqual(state.actor_index, None)
         self.assertEqual(state.showdown_index, 1)
 
@@ -1045,6 +1283,29 @@ class StateTestCase(TestCase):
         self.assertEqual(create_state((1, 2, 4, 8), 6).actor_index, 4)
         self.assertEqual(create_state((1, 2, 0, 0, 0, 4), 6).actor_index, 0)
         self.assertEqual(create_state((1, 2, 4, 0, 0, 8), 6).actor_index, 0)
+
+        state = NoLimitShortDeckHoldem.create_state(
+            (
+                Automation.ANTE_POSTING,
+                Automation.BET_COLLECTION,
+                Automation.BLIND_OR_STRADDLE_POSTING,
+                Automation.HOLE_CARDS_SHOWING_OR_MUCKING,
+                Automation.HAND_KILLING,
+                Automation.CHIPS_PUSHING,
+                Automation.CHIPS_PULLING,
+                Automation.HOLE_DEALING,
+                Automation.BOARD_DEALING,
+                Automation.CARD_BURNING,
+            ),
+            True,
+            1,
+            (0, 2),
+            2,
+            (400, 400),
+            2,
+        )
+
+        self.assertEqual(state.actor_index, 1)
 
     def test_chips_pushing(self) -> None:
         state = NoLimitTexasHoldem.create_state(
@@ -1376,6 +1637,87 @@ class StateTestCase(TestCase):
             state.check_or_call(),
             CheckingOrCalling(commentary=None, player_index=0, amount=0),
         )
+
+    def test_nonstandard_folds(self) -> None:
+        simplefilter('ignore')
+
+        hh = HandHistory(
+            variant='NT',
+            ante_trimming_status=False,
+            antes=[125, 125, 125, 125, 125, 125, 125, 125],
+            blinds_or_straddles=[250, 500, 0, 0, 0, 0, 0, 0],
+            min_bet=125,
+            starting_stacks=[2198, 945, 852, 3348, 1687, 1262, 3657, 3966],
+            actions=[
+                'd dh p1 9h5c',
+                'd dh p2 KsQh',
+                'd dh p3 7sQd',
+                'd dh p4 2dKc',
+                'd dh p5 8c6d',
+                'd dh p6 Td9s',
+                'd dh p7 8hQs',
+                'd dh p8 9cKh',
+                'p3 cbr 645',
+                'p4 cc',
+                'p5 cbr 1288',
+                'p6 cc',
+                'p7 cc',
+                'p8 cc',
+                'p1 cc',
+                'p2 cc',
+                'p3 cc',
+                'p4 cbr 3178',
+                'p5 cc',
+                'p7 f',
+                'p8 cc',
+                'p1 cc',
+                'd db 2h6c4h',
+                'p4 f',
+                'p8 f',
+                'p1 sm 9h5c',
+                'p2 sm KsQh',
+                'p3 sm 7sQd',
+                'p5 sm 8c6d',
+                'p6 sm Td9s',
+                'd db Th',
+                'd db 5d',
+            ],
+        )
+        state = list(hh)[-1]
+
+        self.assertEqual(sum(state.starting_stacks) - sum(state.stacks), 2210)
+
+        resetwarnings()
+
+    def test_folded_status(self) -> None:
+        state = RhodeIslandHoldem.create_state(tuple(Automation))
+
+        state.check_or_call()
+        state.check_or_call()
+        state.check_or_call()
+        state.check_or_call()
+        state.complete_bet_or_raise_to()
+        state.complete_bet_or_raise_to()
+        state.check_or_call()
+        self.assertFalse(state.folded_status)
+
+        state = RhodeIslandHoldem.create_state(tuple(Automation))
+
+        state.complete_bet_or_raise_to()
+        state.complete_bet_or_raise_to()
+        state.fold()
+        self.assertTrue(state.folded_status)
+
+        state = RhodeIslandHoldem.create_state(tuple(Automation))
+
+        state.check_or_call()
+        state.check_or_call()
+        state.check_or_call()
+        state.check_or_call()
+        state.complete_bet_or_raise_to()
+        state.complete_bet_or_raise_to()
+        state.fold()
+        self.assertTrue(state.folded_status)
 
 
 if __name__ == '__main__':
